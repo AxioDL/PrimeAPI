@@ -25,6 +25,8 @@ typedef unsigned long long	uint64;
 #define NULL 0
 #endif
 
+#define PADDING(Amt) char padding##Amt[##Amt]
+
 // Allocation
 void* operator new(uint32 size, const char *pkFileAndLine, const char *pkType);
 void* operator new[](uint32 size, const char *pkFileAndLine, const char *pkType);
