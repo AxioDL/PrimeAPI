@@ -183,7 +183,7 @@ def parse_code_macros(sourcePath):
 	# This implementation leaves a bit to be desired - namely, it doesn't account for commented-out
 	# code or #ifdef'd out code, and won't correctly mangle templates that have default parameters
 	sourceFile = open(sourcePath, 'r')
-	regex = re.compile("^PATCH_SYMBOL\((.*),(.*)\)")
+	regex = re.compile("^PATCH_SYMBOL\((.*)\((.*)\)(.*),(.*)\((.*)\)(.*)\)")
 	pos = 0
 	
 	while True:
@@ -193,8 +193,8 @@ def parse_code_macros(sourcePath):
 		match = regex.search(line)
 		
 		if match is not None:
-			origSymbol = match.group(1)
-			patchSymbol = match.group(2)
+			origSymbol = "%s(%s)%s" % (match.group(1), match.group(2), match.group(3))
+			patchSymbol = "%s(%s)%s" % (match.group(4), match.group(5), match.group(6))
 			pos = match.endpos
 			
 			dolPatches.extend( dolFile.generate_patches(mangle(origSymbol), patchSymbol) )
@@ -236,6 +236,7 @@ def compile_object(sourcePath, outPath):
 			"-Cpp_exceptions off",
 			"-sdata 0",
 			"-sdata2 0",
+			"-O",
 			" ".join(includeDirs),
 			"-r",
 			"-c %s" % sourcePath,

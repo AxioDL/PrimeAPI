@@ -102,6 +102,10 @@ protected:
 	/* 0x01C */ float mVisorTransitionFactor;
 	/* 0x020 */ EPlayerSuit mCurrentSuit;
 	/* 0x024 */ CPowerUp mPowerUps[kItem_Max];
+
+public:
+	inline CHealthInfo* GetHealthInfo()			{ return &mHealthInfo; }
+	inline CPowerUp* GetPowerUp(EItemType Item)	{ return &mPowerUps[Item]; }
 };
 
 #endif
