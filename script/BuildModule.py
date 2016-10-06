@@ -83,6 +83,27 @@ def get_extension(sourceFile):
 	
 def get_object_path(sourceFile):
 	return "%s\\%s.o" % (buildDir, os.path.splitext( os.path.split(sourceFile)[1] )[0])
+
+def generate_scoped_decl(declText, declType):
+	# This allows us to forward-declare scoped classes and functions which are scoped inside of a namespace or a class. While
+	# normally you wouldn't be allowed to declare a namespace with the same name as a class, in this case ApplyCodePatches is
+	# compiled separately from the other modules and therefore doesn't know of any name conflicts. Using namespaces like this
+	# causes the compiler to generate an identical symbol to the class member, which can then later be resolved by the linker.
+	scopes = split_scopes(declText)
+	baseName = scopes[-1]
+	del scopes[-1]
+	outText = ""
+	
+	for scope in scopes:
+		outText += "namespace %s { " % scope
+	
+	outText += "%s %s;" % (declType, baseName)
+	
+	for scope in scopes:
+		outText += " }"
+	
+	outText += '\n'
+	return outText
 	
 def generate_patch_code():
 	template = open("%s\\script\\ApplyCodePatches_Template.cpp" % primeApiRoot, "r")
@@ -143,28 +164,10 @@ def generate_patch_code():
 						if word and word != 'const' and word != 'unsigned' and word != 'signed':
 							# this is probably our type name!
 							if not is_basic_type(word):
-								classDecls += "class %s;\n" % word
+								classDecls += generate_scoped_decl(word, "class")
 							break
-							
-				# Add forward decl for function name, accounting for scoping. This allows us to obtain the pointer to member functions
-				# of classes declared in other source files. It would not normally be allowed to declare a namespace with the same name as an
-				# existing class, but since none of our compiled modules know about each other, we can compile them and generate the same
-				# symbol as the member function, which will then be resolved by the linker!
-				funcDecl = ""
-				scopes = split_scopes(symbol)
-				funcName = scopes[-1]
-				del scopes[-1]
 				
-				for scope in scopes:
-					funcDecl += "namespace %s { " % scope
-				
-				funcDecl += "void %s;" % funcName
-				
-				for scope in scopes:
-					funcDecl += " }"
-				
-				funcDecl += "\n"
-				funcDecls += funcDecl
+				funcDecls += generate_scoped_decl(symbol, "void")
 				usedSymbols.append(symbol)
 		
 		funcCode = funcCode + patchCode
@@ -189,8 +192,27 @@ def parse_code_macros(sourcePath):
 	while True:
 		line = sourceFile.readline()
 		if not line: break
-		line = line.strip().replace(' ', '')
-		match = regex.search(line)
+		
+		# Replace spaces except ones denoting const parameters
+		line = line.strip()
+		strippedLine = ""
+		
+		for chrIdx in range(0, len(line)):
+			chr = line[chrIdx]
+			
+			if chr != ' ':
+				strippedLine += chr
+			
+			else:
+				if chrIdx >= 5 and line[chrIdx - 5 : chrIdx] == "const":
+					# Verify this const precedes a type name by verifying the next non-whitespace character is not a comma
+					for chrIdx2 in range(chrIdx, len(line)):
+						if line[chrIdx2] != ' ':
+							if line[chrIdx2] != ',':
+								strippedLine += chr
+							break
+		
+		match = regex.search(strippedLine)
 		
 		if match is not None:
 			origSymbol = "%s(%s)%s" % (match.group(1), match.group(2), match.group(3))

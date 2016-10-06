@@ -3,6 +3,7 @@ MANGLED_TYPES = {
 	'void': 'v',
 	'bool': 'b',
 	'char': 'c',
+	'wchar_t': 'w',
 	'short': 's',
 	'int': 'i',
 	'long': 'l',
@@ -86,7 +87,7 @@ def mangle_operator(operName):
 
 def split_scopes(scopedName):
 	isOperatorFunc = False
-	templateDepth = 0
+	innerDepth = 0
 	lastSplit = -2
 	out = []
 	
@@ -94,13 +95,13 @@ def split_scopes(scopedName):
 		if scopedName[chrIdx:chrIdx+8] == "operator":
 			isOperatorFunc = True
 			
-		elif scopedName[chrIdx] == '<' and not isOperatorFunc:
-			templateDepth += 1
+		elif (scopedName[chrIdx] == '<' or scopedName[chrIdx] == '(') and not isOperatorFunc:
+			innerDepth += 1
 			
-		elif scopedName[chrIdx] == '>' and not isOperatorFunc:
-			templateDepth -= 1
+		elif (scopedName[chrIdx] == '>' or scopedName[chrIdx] == ')') and not isOperatorFunc:
+			innerDepth -= 1
 		
-		elif scopedName[chrIdx:chrIdx+2] == '::' and templateDepth == 0:
+		elif scopedName[chrIdx:chrIdx+2] == '::' and innerDepth == 0:
 			out.append(scopedName[lastSplit + 2 : chrIdx])
 			lastSplit = chrIdx
 	
