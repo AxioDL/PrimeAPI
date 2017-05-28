@@ -1,5 +1,6 @@
 from Stream import *
 import os
+import struct
 
 def list_as_hex(list):
 	return [("0x%08X" % value) for value in list]
@@ -72,9 +73,50 @@ class DolFile:
 		
 	def is_patched(self):
 		return self.textSecOffsets[2] != 0
+	
+	def patch_rel24(self, buffer, offset, basePatchAddress, targetAddress):
+		instruction = struct.unpack(">I", buffer[offset:offset+4])[0] & ~0x3FFFFFC
+		relAddr = targetAddress - (basePatchAddress + offset)
+		instruction |= (relAddr & 0x3FFFFFC)
+		buffer[offset:offset+4] = struct.pack(">I", instruction)
+	
+	def patch_hi_lo(self, buffer, offsetHi, offsetLo, targetAddress):
+		instrHi = struct.unpack(">I", buffer[offsetHi:offsetHi+4])[0] & 0xFFFF0000
+		instrLo = struct.unpack(">I", buffer[offsetLo:offsetLo+4])[0] & 0xFFFF0000
+		addrHi = (targetAddress & 0xFFFF0000)
+		addrLo = (targetAddress & 0x0000FFFF)
+		
+		if addrLo >= 0x8000:
+			addrHi += 0x10000
+		
+		instrHi |= (addrHi >> 16)
+		instrLo |= addrLo
+		
+		buffer[offsetHi:offsetHi+4] = struct.pack(">I", instrHi)
+		buffer[offsetLo:offsetLo+4] = struct.pack(">I", instrLo)
 		
 	def apply_patch(self, patchFile, outFile):
-		# todo - make this more flexible so it can work with multiple versions of the game...
+		# Find the addresses of functions we need to call from the patch code
+		addrDVDOpen = self.get_symbol("DVDOpen")
+		addrDVDReadAsyncPrio = self.get_symbol("DVDReadAsyncPrio")
+		addrDVDClose = self.get_symbol("DVDClose")
+		addrOSLink = self.get_symbol("OSLink")
+		addrPPCSetFpIEEEMode = self.get_symbol("PPCSetFpIEEEMode")
+		addrNew = self.get_symbol("__nwa__FUlPCcPCc")
+		
+		failed = []
+		if addrDVDOpen == None: failed.append("DVDOpen")
+		if addrDVDReadAsyncPrio == None: failed.append("DVDReadAsyncPrio")
+		if addrDVDClose == None: failed.append("DVDClose")
+		if addrOSLink == None: failed.append("OSLink")
+		if addrPPCSetFpIEEEMode == None: failed.append("PPCSetFpIEEEMode")
+		if addrNew == None: failed.append("__nwa__FUlPCcPCc")
+		
+		if len(failed) > 0:
+			print("Failed to apply DOL patch! The following symbols are missing: %s" % ", ".join(failed))
+			return False
+		
+		# Read patch data into memory
 		assert(self.valid)
 		patchFile = open(patchFile, "rb")
 		patchData = bytearray( patchFile.read() )
@@ -82,9 +124,29 @@ class DolFile:
 		patchData.extend(bytearray(amtToPad))
 		patchFile.close()
 		
+		# Pick address to write the patch code to
+		address = 0x80002800
+		print("Adding patch to 0x%08X" % address)
+		
+		# Relocate addresses in the patch code to account for the address it's placed at in memory
+		self.patch_hi_lo(patchData, 0x04, 0x08, address + 0xFF)
+		self.patch_hi_lo(patchData, 0x20, 0x24, address + 0xF0)
+		self.patch_hi_lo(patchData, 0x40, 0x44, address + 0xE9)
+		self.patch_hi_lo(patchData, 0x64, 0x68, address)
+		self.patch_hi_lo(patchData, 0x74, 0x78, address + 0xFF)
+		self.patch_hi_lo(patchData, 0x90, 0x94, address + 0xE9)
+		self.patch_rel24(patchData, 0x2C, address, addrDVDOpen)
+		self.patch_rel24(patchData, 0x4C, address, addrNew)
+		self.patch_rel24(patchData, 0x70, address, addrDVDReadAsyncPrio)
+		self.patch_rel24(patchData, 0x88, address, addrDVDClose)
+		self.patch_rel24(patchData, 0x9C, address, addrNew)
+		self.patch_rel24(patchData, 0xAC, address, addrOSLink)
+		self.patch_rel24(patchData, 0xBC, address, addrPPCSetFpIEEEMode)
+		
+		# Update DOL header for write
 		self.textSecOffsets[2] = self.textSecOffsets[1] + self.textSecSizes[1]
 		self.textSecSizes[2] = len(patchData)
-		self.textSecAddresses[2] = 0x80001800
+		self.textSecAddresses[2] = address
 		
 		srcStream = InputStream(self.filename, BIG_ENDIAN)
 		outStream = OutputStream(BIG_ENDIAN)
@@ -129,6 +191,16 @@ class DolFile:
 			else:
 				srcStream.goto(self.textSecOffsets[textSecIdx])
 				data = srcStream.read_bytes(self.textSecSizes[textSecIdx])
+				
+				if textSecIdx == 1:
+					array = bytearray(data)
+					
+					# Patch code in the original game code to call the custom linker function
+					# todo - this offset shouldn't be hardcoded
+					self.patch_rel24(array, 0x17B4, self.textSecAddresses[textSecIdx], address + 0x10)
+					
+					data = bytes(array)
+				
 				outStream.write_bytes(data)
 		
 		for dataSecIdx in range(0, 11):
@@ -136,10 +208,9 @@ class DolFile:
 			data = srcStream.read_bytes(self.dataSecSizes[dataSecIdx])
 			outStream.write_bytes(data)
 		
-		# Patch one more instruction to call LinkCustomCode(), then save
-		outStream.goto(0x1D54)
-		outStream.write_long(0x4BFFCA1D)
+		# Save
 		outStream.save_file(outFile)
+		return True
 		
 	def load_symbols(self, symbolDir):
 		# Load symbols

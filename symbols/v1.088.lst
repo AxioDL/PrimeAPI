@@ -8510,6 +8510,7 @@
 0x80381A28 __OSMaskInterrupts
 0x80381AB0 __OSUnmaskInterrupts
 0x80381B38 __OSDispatchInterrupt
+0x80382190 OSLink
 0x803827F8 __OSModuleInit
 0x80382A14 OnReset
 0x80382A50 MEMIntrruptHandler
