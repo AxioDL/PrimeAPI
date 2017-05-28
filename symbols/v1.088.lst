@@ -9185,9 +9185,9 @@
 0x805A8C2C g_CharacterFactoryBuilder
 0x805A8C38 gpMain
 0x805A8C3C gpController
-0x805A8C40 g_GameState
-0x805A8C44 g_MemoryCardSys
-0x805A8C48 g_InGameTweakManager
+0x805A8C40 gpGameState
+0x805A8C44 gpMemoryCardSys
+0x805A8C48 gpInGameTweakManager
 0x805A8C5C sARAMMemArray
 0x805A8C68 gGameArchSupportRefCount
 0x805A8C6C gGameArchSupportInitialized

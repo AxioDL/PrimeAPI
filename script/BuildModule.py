@@ -405,8 +405,13 @@ def convert_preplf_to_rel(preplfPath, outRelPath):
 			
 			symbolSection = section.link
 			targetSection = section.targetSecIdx
-			curOffset = 0
 			
+			# Make sure we only write relocations for sections that were written to the file
+			sectionInfo = sectionInfoList[targetSection]
+			if sectionInfo['offset'] == 0:
+				continue
+			
+			curOffset = 0
 			wroteSectionCommand = False
 			
 			# Parse relocations
@@ -459,8 +464,7 @@ def convert_preplf_to_rel(preplfPath, outRelPath):
 						relocWriteSuccess = False
 						continue
 					
-					dolSymbolSection = dolFile.get_section_index(dolSymbolAddr)
-					rel.write_byte(dolSymbolSection)
+					rel.write_byte(0)
 					rel.write_long(dolSymbolAddr)
 				
 				curOffset += offset

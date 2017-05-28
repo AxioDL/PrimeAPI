@@ -260,7 +260,7 @@ class DolFile:
 				return secIdx
 		
 		# If we're at this point then the address is invalid
-		assert(false)
+		assert(False)
 		return -1
 		
 	def print_header_info(self):
