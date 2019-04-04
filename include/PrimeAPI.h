@@ -26,9 +26,38 @@ typedef unsigned long long	uint64;
 #endif
 
 #define PADDING(Amt) char padding##Amt[##Amt]
+#define ALIGN(V, Alignment) (((V)+(Alignment)) & ~((Alignment)-1))
 
-// Allocation
-void* operator new(uint32 size, const char *pkFileAndLine, const char *pkType);
-void* operator new[](uint32 size, const char *pkFileAndLine, const char *pkType);
+// Retrieves a field from an incomplete class declaration
+template<typename T>
+inline T* GetField(const void* inThis, uint offset)
+{
+	return reinterpret_cast<T*>( ((char*) inThis) + offset );
+};
+
+// Defines a field within an incomplete class declaration by declaring the following member functions:
+//	[FieldType] Get[FieldName]() const;
+//	Set[FieldName](const [FieldType]&);
+#define DECLARE_FIELD(FieldType, FieldName, FieldOffset) \
+	FieldType Get##FieldName() const 			{ return *GetField<FieldType>(this, FieldOffset); } \
+	void Set##FieldName(const FieldType& in) 	{ *GetField<FieldType>(this, FieldOffset) = in; }
+
+// new operators from Metroid Prime
+void* operator new  (uint32 size, const char* fileAndLine, const char* type);
+void* operator new[](uint32 size, const char* fileAndLine, const char* type);
+
+// new operator implementation without extra parameters
+inline void* operator new  (uint32 size) { return ::operator new  (size, "??(??)", NULL); }
+inline void* operator new[](uint32 size) { return ::operator new[](size, "??(??)", NULL); }
+
+// delete operator implementation (the operators are inlined in Metroid Prime)
+#include <Runtime/CMemory.hpp>
+inline void operator delete  (void* data) { CMemory::Free(data); }
+inline void operator delete[](void* data) { CMemory::Free(data); }
+
+// Forward declare of some functions to allow usage without STL headers
+extern "C" {
+	void memcpy(void* dst, void* src, int len);
+}
 
 #endif

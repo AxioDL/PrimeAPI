@@ -1,8 +1,8 @@
 #ifndef CPLAYERSTATE_H
 #define CPLAYERSTATE_H
 
-#include "PrimeAPI.h"
-#include "CHealthInfo.h"
+#include <PrimeAPI.h>
+#include <Runtime/World/CHealthInfo.hpp>
 
 class CPlayerState
 {
