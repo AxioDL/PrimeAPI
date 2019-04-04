@@ -6,11 +6,11 @@
 class CHealthInfo
 {
 public:
-	float mHealth;
-	float mKnockbackResistance;
+	float health;
+	float knockbackResistance;
 	
 	inline CHealthInfo()
-		: mHealth(0.f), mKnockbackResistance(0.f) {}
+		: health(0.f), knockbackResistance(0.f) {}
 	
 	CHealthInfo(float health, float resistance);
 };

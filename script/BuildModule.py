@@ -633,7 +633,7 @@ def main():
 	# Apply DOL patches
 	shouldContinue = True
 	
-	if not dolFile.is_patched():
+	if not dolFile.is_patched(bootstrapSectionIdx):
 		print("Detected DOL file is unpatched. Applying patch...")
 		dolFilename = dolFile.filename
 		nameEnd = dolFilename.rfind('.')

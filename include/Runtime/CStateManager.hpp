@@ -1,5 +1,5 @@
-#ifndef CSTATEMANAGER_H
-#define CSTATEMANAGER_H
+#ifndef CSTATEMANAGER_HPP
+#define CSTATEMANAGER_HPP
 
 #include <PrimeAPI.h>
 #include <rstl/rc_ptr.h>

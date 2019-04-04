@@ -92,20 +92,15 @@ public:
 		int mCapacity;
 	};
 	
-protected:
-	/* 0x000 */ int mFlags;
-	/* 0x004 */ int mUnknown0;
-	/* 0x008 */ EBeamId mCurrentBeam;
-	/* 0x00C */ CHealthInfo mHealthInfo;
-	/* 0x014 */ EPlayerVisor mCurrentVisor;
-	/* 0x018 */ EPlayerVisor mTransitionVisor;
-	/* 0x01C */ float mVisorTransitionFactor;
-	/* 0x020 */ EPlayerSuit mCurrentSuit;
-	/* 0x024 */ CPowerUp mPowerUps[kItem_Max];
-
-public:
-	inline CHealthInfo* GetHealthInfo()			{ return &mHealthInfo; }
-	inline CPowerUp* GetPowerUp(EItemType Item)	{ return &mPowerUps[Item]; }
+	/* 0x000 */ int flags;
+	/* 0x004 */ int unknown0;
+	/* 0x008 */ EBeamId currentBeam;
+	/* 0x00C */ CHealthInfo healthInfo;
+	/* 0x014 */ EPlayerVisor currentVisor;
+	/* 0x018 */ EPlayerVisor transitionVisor;
+	/* 0x01C */ float visorTransitionFactor;
+	/* 0x020 */ EPlayerSuit currentSuit;
+	/* 0x024 */ CPowerUp powerUps[kItem_Max];
 };
 
 #endif
