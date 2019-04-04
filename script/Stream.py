@@ -53,9 +53,17 @@ class StreamBase:
 
 # Define input stream class
 class InputStream(StreamBase):
-	def __init__(self, filename, endianness = BIG_ENDIAN):
-		with open(filename, 'rb') as stream:
-			self.data = stream.read()
+	def __init__(self, input, endianness = BIG_ENDIAN):
+		if isinstance(input, str):
+			with open(input, 'rb') as stream:
+				self.data = stream.read()
+		
+		elif isinstance(input, bytes):
+			self.data = input
+		
+		elif isinstance(input, bytearray):
+			self.data = bytes(input)
+		
 		self.length = len(self.data)
 		self.offset = 0
 		self.endian = endianness

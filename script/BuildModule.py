@@ -20,14 +20,23 @@ linkerPath = ""
 projDir = ""
 buildDir = ""
 moduleName = "Mod"
+bootstrapHookTarget = "PPCSetFpIEEEMode"
+bootstrapSectionIdx = 2
+bootstrapAddr = 0x80002800
 outFile = ""
 dolFile = DolFile()
 dolPatches = []
 verbose = False
 buildDebug = False
 
+def get_filename(sourceFile):
+	return os.path.splitext( os.path.split(sourceFile)[1] )[0]
+
+def get_extension(sourceFile):
+	return os.path.splitext(sourceFile)[1]
+
 def parse_commandline():
-	global projDir, buildDir, moduleName, outFile, verbose, buildDebug
+	global projDir, buildDir, bootstrapHookTarget, bootstrapSectionIdx, bootstrapAddr, moduleName, outFile, verbose, buildDebug
 	
 	if len(sys.argv) < 3:
 		print("Please specify a project directory and a dol to link to!")
@@ -59,6 +68,23 @@ def parse_commandline():
 		if arg == "-debug":
 			buildDebug = True
 		
+		elif arg == "-bootstrap_hook":
+			bootstrapHookTarget = sys.argv[argIdx + 1]
+			argIdx += 1
+
+		elif arg == "-bootstrap_section":
+			bootstrapSectionIdx = int(sys.argv[argIdx + 1])
+			argIdx += 1
+
+			# Sections 0 and 1 are in use by the game. 2 through 6 can be used by mods.
+			if bootstrapSectionIdx < 2 or bootstrapSectionIdx > 6:
+				print("An invalid bootstrap section index was provided. Please specify an index between 2 and 6.")
+				return False
+		
+		elif arg == "-bootstrap_address":
+			bootstrapAddr = int(sys.argv[argIdx + 1], 16)
+			argIdx += 1
+
 		elif arg == "-m":
 			moduleName = sys.argv[argIdx + 1]
 			argIdx += 1
@@ -75,14 +101,13 @@ def parse_commandline():
 	# Set default values for some arguments
 	if not outFile:
 		outFile = "%s\\%s.rel" % (buildDir, moduleName)
+	else:
+		moduleName = get_filename(outFile)
 	
 	return True
-
-def get_extension(sourceFile):
-	return os.path.splitext(sourceFile)[1]
 	
 def get_object_path(sourceFile):
-	return "%s\\%s.o" % (buildDir, os.path.splitext( os.path.split(sourceFile)[1] )[0])
+	return "%s\\%s.o" % (buildDir, get_filename(sourceFile))
 
 def generate_scoped_decl(declText, declType):
 	# This allows us to forward-declare scoped classes and functions which are scoped inside of a namespace or a class. While
@@ -260,7 +285,6 @@ def compile_object(sourcePath, outPath):
 			"-sdata2 0",
 			"-O",
 			" ".join(includeDirs),
-			"-r",
 			"-c %s" % sourcePath,
 			"-o %s" % get_object_path(sourcePath)]
 	
@@ -354,9 +378,19 @@ def convert_preplf_to_rel(preplfPath, outRelPath):
 		
 		secStart = rel.tell()
 		name = section.name
+		info['name'] = name
+		
+		allowedSections = [
+			".init",
+			".text",
+			".ctors",
+			".dtors",
+			".rodata",
+			".data"
+		]
 		
 		isBss = name == ".bss"
-		shouldKeep = (name == ".text" or name == ".rodata" or name == ".ctors" or name == ".dtors" or name == ".data")
+		shouldKeep = (name in allowedSections)
 		
 		if shouldKeep is True:
 			info['offset'] = secStart
@@ -515,6 +549,32 @@ def compile_rel():
 	sourceFiles.append( "%s\\PowerPC_EABI_Support\\Runtime\\Src\\global_destructor_chain.c" % cwRoot )
 	sourceFiles = [file for file in sorted(sourceFiles) if file.find("build\\ApplyCodePatches.cpp") == -1]
 	
+	# Set up compilation environment
+	MWCIncludes = [cwRoot + "\\PowerPC_EABI_Support\\Msl\\MSL_C\\MSL_Common\\Include",
+			cwRoot + "\\PowerPC_EABI_Support\\Msl\\MSL_C\\MSL_Common_Embedded\\Include",
+			cwRoot + "\\PowerPC_EABI_Support\\Msl\\MSL_C\\PPC_EABI\\Include",
+			cwRoot + "\\PowerPC_EABI_Support\\Msl\\MSL_C++\\MSL_Common\\Include",
+			cwRoot + "\\PowerPC_EABI_Support\\Runtime\\Inc",
+			dolphinRoot + "\\include"]
+	
+	MWLibraries = [cwRoot + "\\PowerPC_EABI_Support\\MetroTRK",
+				   cwRoot + "\\PowerPC_EABI_Support\\Msl\\MSL_C\\PPC_EABI\\LIB",
+				   cwRoot + "\\PowerPC_EABI_Support\\Msl\\MSL_C++\\PPC_EABI\\Lib",
+				   cwRoot + "\\PowerPC_EABI_Support\\Runtime\\Lib",
+				   dolphinRoot + "\\HW2\\lib"]
+	
+	MWLibraryFiles = ["MSL_C.PPCEABI.bare.H.a",
+					  "MSL_C++.PPCEABI.bare.H.a",
+					  "fdlibm.PPCEABI.H.a",
+					  "sp_mathlib.H.a",
+					  "Runtime.PPCEABI.H.a",
+					  "TRK_MINNOW_DOLPHIN.a",
+					  "TRK_MINNOW_DOLPHIN_1_0.a"]
+	
+	os.environ["MWCIncludes"]    = ';'.join(MWCIncludes)
+	os.environ["MWLibraries"]    = ';'.join(MWLibraries)
+	os.environ["MWLibraryFiles"] = ';'.join(MWLibraryFiles)
+	
 	# Compile/link source files
 	objectFiles = []
 	
@@ -581,7 +641,7 @@ def main():
 		patchedName = "%s_mod.dol" % nameBase
 		patchFile = "%s\\script\\DolPatch.bin" % primeApiRoot
 		
-		shouldContinue = dolFile.apply_patch(patchFile, patchedName)
+		shouldContinue = dolFile.apply_patch(bootstrapHookTarget, bootstrapSectionIdx, bootstrapAddr, moduleName, patchFile, patchedName)
 		
 		if shouldContinue:
 			print("Saved patched DOL to %s" % patchedName)
