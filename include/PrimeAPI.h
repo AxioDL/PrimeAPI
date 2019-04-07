@@ -20,6 +20,12 @@ typedef unsigned short		uint16;
 typedef unsigned long		uint32;
 typedef unsigned long long	uint64;
 
+// Other common types
+struct TAreaId {
+	int32 Id;
+	inline operator int32() const { return Id; }
+};
+
 // Common defines
 #ifndef NULL
 #define NULL 0

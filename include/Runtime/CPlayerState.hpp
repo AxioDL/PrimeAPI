@@ -4,6 +4,14 @@
 #include <PrimeAPI.h>
 #include <Runtime/World/CHealthInfo.hpp>
 
+class CInputStream;
+class COutputStream;
+class CStateManager;
+
+// Max inventory capacity values, indexed by EItemType
+const uint32 gkPowerUpMaxValues[41] = {	1, 1, 1,  1, 250, 1, 1, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+										1, 1, 1, 14,   1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 };
+
 class CPlayerState
 {
 public:
@@ -88,8 +96,12 @@ public:
 	class CPowerUp
 	{
 	public:
-		int mAmount;
-		int mCapacity;
+		int amount;
+		int capacity;
+		
+		CPowerUp() {}
+		CPowerUp(int, int);
+		CPowerUp(CInputStream&);
 	};
 	
 	/* 0x000 */ int flags;
@@ -101,6 +113,35 @@ public:
 	/* 0x01C */ float visorTransitionFactor;
 	/* 0x020 */ EPlayerSuit currentSuit;
 	/* 0x024 */ CPowerUp powerUps[kItem_Max];
+	
+	CPlayerState();
+	CPlayerState(CInputStream&);
+	
+	bool CanVisorSeeFog(const CStateManager&) const;
+	CPlayerState::EPlayerVisor GetActiveVisor(const CStateManager&) const;
+	void UpdateStaticInterference(CStateManager&, const float&);
+	void NewScanTime(uint);
+	void IncreaseScanTime(uint, float);
+	float GetScanTime(uint) const;
+	static float GetEnergyTankCapacity();
+	static float GetBaseHealthCapacity();
+	bool GetIsVisorTransitioning() const;
+	float GetVisorTransitionFactor() const;
+	void UpdateVisorTransition(float);
+	void StartTransitionToVisor(CPlayerState::EPlayerVisor);
+	void ResetVisor();
+	bool ItemEnabled(CPlayerState::EItemType) const;
+	void DisableItem(CPlayerState::EItemType);
+	void EnableItem(CPlayerState::EItemType);
+	uint GetPowerUp(CPlayerState::EItemType);
+	bool HasPowerUp(CPlayerState::EItemType) const;
+	uint GetItemCapacity(CPlayerState::EItemType) const;
+	uint GetItemAmount(CPlayerState::EItemType) const;
+	void DecrPickUp(CPlayerState::EItemType, int);
+	void IncrPickUp(CPlayerState::EItemType, int);
+	void AddPowerUp(CPlayerState::EItemType, int);
+	void ResetPowerUp(CPlayerState::EItemType, int);
+	void PutTo(COutputStream&);
 };
 
 #endif
