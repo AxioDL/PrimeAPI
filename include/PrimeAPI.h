@@ -21,9 +21,17 @@ typedef unsigned long		uint32;
 typedef unsigned long long	uint64;
 
 // Other common types
-struct TAreaId {
+class TAreaId {
+public:
 	int32 Id;
-	inline operator int32() const { return Id; }
+
+	TAreaId()								{}
+	TAreaId(const TAreaId& rhs)				{ Id = rhs.Id; }
+	~TAreaId()								{}
+	TAreaId& operator=(const TAreaId& rhs)	{ Id = rhs.Id; return *this; }
+	TAreaId& operator=(int32 i)				{ Id = i; return *this; }
+	
+	operator int32() const					{ return Id; }
 };
 
 // Common defines

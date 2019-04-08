@@ -9,6 +9,7 @@
 
 class CPlayer;
 class CPlayerState;
+class CWorld;
 
 class CStateManager
 {
@@ -23,6 +24,7 @@ public:
 	void InitializeState(uint WorldAssetId, TAreaId AreaId, uint AreaAssetId);
 	
 	inline CPlayer* GetPlayer() const 				{ return *GetField<CPlayer*>(this, 0x84C); }
+	inline CWorld* GetWorld() const					{ return *GetField<CWorld*>(this, 0x850); }
 	inline CPlayerState* GetPlayerState() const		{ return **GetField<CPlayerState**>(this, 0x8b8); }
 	inline EInitPhase GetInitPhase() const			{ return *GetField<EInitPhase>(this, 0xB3C); }
 };

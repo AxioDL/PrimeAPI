@@ -2,10 +2,32 @@
 #define CWORLDSTATE_HPP
 
 #include <PrimeAPI.h>
+#include <rstl/vector.h>
+
+class CWorldLayers
+{
+public:
+	struct Area
+	{
+		uint32 mStartNameIdx;
+		uint32 mLayerCount;
+		uint64 mLayerBits;
+	};
+};
+
+class CWorldLayerState
+{
+public:
+    rstl::vector<CWorldLayers::Area> areaLayers;
+};
 
 class CWorldState
 {
 public:
+	uint32 x0_worldAssetId;
+	TAreaId x4_areaId;
+	
+	inline CWorldLayerState* GetWorldLayerState() const	{ return **GetField<CWorldLayerState**>(this, 0x14); }
 	void SetDesiredAreaAssetId(uint assetId);
 };
 
